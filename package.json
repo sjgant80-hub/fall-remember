@@ -1,0 +1,12 @@
+{
+  "name": "fall-remember",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "fall-remember.mjs",
+  "description": "A sovereign, fold-native memory organ — a 12-chamber dodecahedral store with content-addressed fold-signatures, cube retrieval, and a kappa-gate.",
+  "author": "sjgant80-hub <sjgant80@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test"
+  }
+}
