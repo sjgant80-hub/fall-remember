@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FallRemember, embed, chamber, address, cosine, goldenPos, DODECA, KAPPA } from './fall-remember.mjs';
+import { cv } from './cam.mjs';
 
 test('the dodeca graph is 12 chambers, each bordering exactly 5, symmetric', () => {
   assert.equal(DODECA.length, 12);
@@ -81,6 +82,18 @@ test('persistence round-trips through a single JSON blob', () => {
   const back = FallRemember.fromJSON(blob);
   assert.equal(back.size, s.size);
   assert.equal(back.retrieve('glacier moraine').center.meta.topic, 3);
+});
+
+test('balance(): the-cam golden-angle balance diagnostic, wired into fall-remember', () => {
+  assert.equal(cv([3, 3, 3]), 0);                          // an even fill → CV 0 (the-cam metric)
+  assert.ok(cv([0, 0, 9]) > 0.5);                          // clumped → high CV
+  const s = new FallRemember();
+  for (let t = 0; t < 12; t++) for (let i = 0; i < 6; i++) s.store({ text: `theme${t} alpha beta gamma ${i}` });
+  const b = s.balance();
+  assert.deepEqual(b.distribution, s.distribution());      // reports the REAL chamber fill
+  assert.equal(b.cv, cv(s.distribution()));                // = the-cam CV of that fill (pins the wire exactly)
+  assert.equal(b.balanced, b.cv <= 0.5);                   // the ≤0.5 verdict
+  assert.equal(new FallRemember().balance().cv, 0);        // empty memory → CV 0 (no throw)
 });
 
 test('KAPPA is 1/φ', () => { assert.ok(Math.abs(KAPPA - 0.6180339887) < 1e-9); });

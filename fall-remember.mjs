@@ -22,6 +22,8 @@
 // dependencies. Deterministic. Node and browser. Bring your own embeddings, or use the built-in one.
 // ════════════════════════════════════════════════════════════════
 
+import { cv } from './cam.mjs';                         // the-cam (vendored, gated 10/10) — the golden-angle balance metric
+
 export const KAPPA = (Math.sqrt(5) - 1) / 2;            // 1/φ ≈ 0.618 — the estate's stability threshold
 export const DIM = 96;                                  // embedding dimension for the built-in embed()
 
@@ -148,6 +150,9 @@ export class FallRemember {
   }
 
   distribution() { return this.chambers.map((c) => c.length); }              // fill per chamber (balance check)
+  // BALANCE (the-cam wire): the golden angle exists to keep buckets even. This reports how even the 12
+  // chambers actually are — CV 0 = perfect, higher = clumped. fall-remember could route but never SAY this.
+  balance() { const d = this.distribution(); const c = cv(d); return { distribution: d, cv: c, balanced: c <= 0.5 }; }
   toJSON() { return { v: 1, size: this.size, chambers: this.chambers }; }    // single-file persistence
   static fromJSON(o) { const s = new FallRemember(); if (o && Array.isArray(o.chambers)) { s.chambers = o.chambers; s.size = o.size ?? o.chambers.flat().length; } return s; }
 }
