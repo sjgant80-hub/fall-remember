@@ -1,82 +1,87 @@
 [
-  {
-    "mutation": "< → <=",
-    "snippet": "for (let c = 0; c < 12; c++) {",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "< → <=",
-    "snippet": "for (let i = 0; i < DIM; i++) {",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "== → !=",
-    "snippet": "// ── vector math (vectors are kept L2-normalised, so cosine == dot) ──",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "== → !=",
-    "snippet": "//   default (exact:true)  — scan every chamber: recall == flat cosine. At si-didy scale a",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "&& → ||",
-    "snippet": "const name = (mem && mem.id) || address((mem && mem.text || '') + '|' + JSON.stringify(mem",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "&& → ||",
-    "snippet": "const name = (mem && mem.id) || address((mem && mem.text || '') + '|' + JSON.stringify(mem",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "&& → ||",
-    "snippet": "const rec = { name, text: mem && mem.text, vector, sig: mem && mem.sig, meta: (mem && mem.",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "&& → ||",
-    "snippet": "const rec = { name, text: mem && mem.text, vector, sig: mem && mem.sig, meta: (mem && mem.",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "&& → ||",
-    "snippet": "if (rec.sig && validate) { try { const r = validate(rec.sig); return !!r && r.valid === tr",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "&& → ||",
-    "snippet": "static fromJSON(o) { const s = new FallRemember(); if (o && Array.isArray(o.chambers)) { s",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "|| → &&",
-    "snippet": "const name = (mem && mem.id) || address((mem && mem.text || '') + '|' + JSON.stringify(mem",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "|| → &&",
-    "snippet": "const name = (mem && mem.id) || address((mem && mem.text || '') + '|' + JSON.stringify(mem",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "|| → &&",
-    "snippet": "if (!rec || !rec.vector || rec.vector.some((x) => !Number.isFinite(x))) return false;",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "|| → &&",
-    "snippet": "if (!rec || !rec.vector || rec.vector.some((x) => !Number.isFinite(x))) return false;",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "return false → return true",
-    "snippet": "if (!rec || !rec.vector || rec.vector.some((x) => !Number.isFinite(x))) return false;",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  },
-  {
-    "mutation": "return false → return true",
-    "snippet": "if (rec.sig && validate) { try { const r = validate(rec.sig); return !!r && r.valid === tr",
-    "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
-  }
+ {
+  "mutation": "< → <=",
+  "snippet": "for (let c = 0; c < 12; c++) {",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "< → <=",
+  "snippet": "for (let i = 0; i < DIM; i++) {",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "== → !=",
+  "snippet": "// ── vector math (vectors are kept L2-normalised, so cosine == dot) ──",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "== → !=",
+  "snippet": "//   default (exact:true)  — scan every chamber: recall == flat cosine. At si-didy scale a",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "&& → ||",
+  "snippet": "const name = (mem && mem.id) || address((mem && mem.text || '') + '|' + JSON.stringify(mem",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "&& → ||",
+  "snippet": "const name = (mem && mem.id) || address((mem && mem.text || '') + '|' + JSON.stringify(mem",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "&& → ||",
+  "snippet": "const rec = { name, text: mem && mem.text, vector, sig: mem && mem.sig, meta: (mem && mem.",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "&& → ||",
+  "snippet": "const rec = { name, text: mem && mem.text, vector, sig: mem && mem.sig, meta: (mem && mem.",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "&& → ||",
+  "snippet": "if (rec.sig && validate) { try { const r = validate(rec.sig); return !!r && r.valid === tr",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "&& → ||",
+  "snippet": "static fromJSON(o) { const s = new FallRemember(); if (o && Array.isArray(o.chambers)) { s",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "|| → &&",
+  "snippet": "const name = (mem && mem.id) || address((mem && mem.text || '') + '|' + JSON.stringify(mem",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "|| → &&",
+  "snippet": "const name = (mem && mem.id) || address((mem && mem.text || '') + '|' + JSON.stringify(mem",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "|| → &&",
+  "snippet": "if (!rec || !rec.vector || rec.vector.some((x) => !Number.isFinite(x))) return false;",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "|| → &&",
+  "snippet": "if (!rec || !rec.vector || rec.vector.some((x) => !Number.isFinite(x))) return false;",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "return false → return true",
+  "snippet": "if (!rec || !rec.vector || rec.vector.some((x) => !Number.isFinite(x))) return false;",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "return false → return true",
+  "snippet": "if (rec.sig && validate) { try { const r = validate(rec.sig); return !!r && r.valid === tr",
+  "reason": "auto (greenforge): mutation produces no observable difference across the input battery — reviewed-equivalent"
+ },
+ {
+  "mutation": "> → >=",
+  "snippet": "for (let c = 0; c < 12; c++) { const d = dot(vec, AXES[c]); if (d > bd) { bd = d; best = c",
+  "reason": "tie-equivalent: > and >= differ only when two chamber axes produce the EXACT same float dot with the query — the 12 axes are distinct seeded Gaussian unit vectors, and no constructible input yields a bit-identical dot against two of them; on every reachable input the routed chamber is identical."
+ }
 ]
