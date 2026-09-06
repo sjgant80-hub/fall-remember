@@ -1,0 +1,7 @@
+[
+ {
+  "mutation": "< → <=",
+  "snippet": "for (const r of rows) { const d = hamming(r.digits, digits); if (d < bd) { bd = d; best = ",
+  "reason": "tie-break equivalence: < keeps the first row on an exact hamming tie, <= keeps the last — but any tie member IS a nearest memory, so the law ('return a nearest match with its distance') is satisfied by both. The distance and confidence reported are identical either way; only which of two equally-near memories wins differs, and the law does not rank ties. Dispute this by adding a tie-ordering rule to the law itself."
+ }
+]

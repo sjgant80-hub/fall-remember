@@ -15,3 +15,7 @@ jobs:
           git clone --depth 1 --branch v0.6 https://github.com/sjgant80-hub/witness.git /tmp/witness
           node /tmp/witness/witness.mjs mutate fall-remember.mjs             --timeout 60000 --cap 500 --baseline witness.baseline.json             --test node --test all.test.mjs | tee verdict.txt
           grep -q '"clean": true' verdict.txt || { echo "::error::mutants survived — the gate is not clean"; exit 1; }
+      - name: witness — the senses (the ear and the voice) re-prove themselves too
+        run: |
+          node /tmp/witness/witness.mjs mutate senses.mjs             --timeout 60000 --cap 400 --baseline senses.baseline.json             --test node --test senses.test.mjs | tee senses-verdict.txt
+          grep -q '"clean": true' senses-verdict.txt || { echo "::error::mutants survived in the senses — the gate is not clean"; exit 1; }
