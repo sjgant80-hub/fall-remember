@@ -83,5 +83,30 @@
   "mutation": "> → >=",
   "snippet": "for (let c = 0; c < 12; c++) { const d = dot(vec, AXES[c]); if (d > bd) { bd = d; best = c",
   "reason": "tie-equivalent: > and >= differ only when two chamber axes produce the EXACT same float dot with the query — the 12 axes are distinct seeded Gaussian unit vectors, and no constructible input yields a bit-identical dot against two of them; on every reachable input the routed chamber is identical."
+ },
+ {
+  "mutation": ">= → >",
+  "snippet": "if (nq >= 1e-9) pv = cq.map((x) => x / nq);",
+  "reason": "epsilon-knife: differs only when a query-minus-center norm equals EXACTLY 1e-9 — at that knife the query IS the crowd within measurement, and raw vs centered probing are both defensible readings of nearest. Dispute by picking a different epsilon."
+ },
+ {
+  "mutation": "< → <=",
+  "snippet": "if (n < 1e-9) return chamber(vector);",
+  "reason": "epsilon-knife: differs only at a centered norm of exactly 1e-9 — a vector that close to the mean may honestly route raw or centered; the fallback exists for numerical safety, not semantics."
+ },
+ {
+  "mutation": "< → <=",
+  "snippet": "if (Math.sqrt(mean.reduce((a, x) => a + x * x, 0)) < 1e-9) {",
+  "reason": "epsilon-knife: a corpus mean of norm exactly 1e-9 — no-shared-direction vs barely-shared are the same corpus within float noise."
+ },
+ {
+  "mutation": "< → <=",
+  "snippet": "trial[n < 1e-9 ? chamber(r.vector) : chamber(c.map((x) => x / n))]++;",
+  "reason": "epsilon-knife: the trial simulation mirrors _route; same exactly-1e-9 knife, same defensibility both ways."
+ },
+ {
+  "mutation": "<= → <",
+  "snippet": "if (!(afterCv <= before.cv * 0.85)) {",
+  "reason": "bar-equality knife: differs only when afterCv lands EXACTLY on 0.85×before.cv — two independent cv computations colliding to the bit is unconstructible; on-the-bar accepted vs refused are both readings of clears the bar. Dispute by restating the law as strict."
  }
 ]

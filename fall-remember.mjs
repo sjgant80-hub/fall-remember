@@ -96,13 +96,24 @@ export function address(s) {
 export function goldenPos(i) { const th = i * 2.399963229728653; const r = Math.sqrt(i + 1); return [r * Math.cos(th), r * Math.sin(th)]; }
 
 export class FallRemember {
-  constructor() { this.chambers = Array.from({ length: 12 }, () => []); this.size = 0; }
+  constructor() { this.chambers = Array.from({ length: 12 }, () => []); this.size = 0; this.center = null; }
+
+  // ROUTING — by raw direction, or (after rebalance()) by deviation from the corpus mean:
+  // a shared vocabulary drags every memory toward one axis; centering routes by what makes
+  // a memory DIFFERENT. A vector too close to the mean falls back to raw routing.
+  _route(vector) {
+    if (!this.center) return chamber(vector);
+    const c = vector.map((x, i) => x - this.center[i]);
+    const n = Math.sqrt(c.reduce((a, x) => a + x * x, 0));
+    if (n < 1e-9) return chamber(vector);
+    return chamber(c.map((x) => x / n));
+  }
 
   // store a memory: { id?, text?, vector?, sig?, meta? }. Returns the stored record, or null if degenerate.
   store(mem) {
     const vector = mem && mem.vector ? normalize(mem.vector.slice()) : embed(mem && mem.text || '');
     if (!vector.some((x) => x !== 0) || vector.some((x) => !Number.isFinite(x))) return null; // κ-gate at write
-    const c = chamber(vector);
+    const c = this._route(vector);
     const name = (mem && mem.id) || address((mem && mem.text || '') + '|' + JSON.stringify(mem && mem.vector || null));
     const rec = { name, text: mem && mem.text, vector, sig: mem && mem.sig, meta: (mem && mem.meta) || {}, chamber: c };
     this.chambers[c].push(rec);
@@ -130,7 +141,14 @@ export class FallRemember {
     let region;
     if (exact) region = Array.from({ length: 12 }, (_, i) => i);
     else {
-      const top = AXES.map((ax, c) => [c, dot(qv, ax)]).sort((a, b) => b[1] - a[1]).slice(0, Math.max(1, probes)).map((x) => x[0]);
+      // probe selection follows the SAME routing law as store(): centered when a center is set
+      let pv = qv;
+      if (this.center) {
+        const cq = qv.map((x, i) => x - this.center[i]);
+        const nq = Math.sqrt(cq.reduce((a, x) => a + x * x, 0));
+        if (nq >= 1e-9) pv = cq.map((x) => x / nq);
+      }
+      const top = AXES.map((ax, c) => [c, dot(pv, ax)]).sort((a, b) => b[1] - a[1]).slice(0, Math.max(1, probes)).map((x) => x[0]);
       const set = new Set();
       for (const c of top) { set.add(c); for (const nb of DODECA[c]) set.add(nb); }
       region = [...set];
@@ -153,8 +171,49 @@ export class FallRemember {
   // BALANCE (the-cam wire): the golden angle exists to keep buckets even. This reports how even the 12
   // chambers actually are — CV 0 = perfect, higher = clumped. fall-remember could route but never SAY this.
   balance() { const d = this.distribution(); const c = cv(d); return { distribution: d, cv: c, balanced: c <= 0.5 }; }
-  toJSON() { return { v: 1, size: this.size, chambers: this.chambers }; }    // single-file persistence
-  static fromJSON(o) { const s = new FallRemember(); if (o && Array.isArray(o.chambers)) { s.chambers = o.chambers; s.size = o.size ?? o.chambers.flat().length; } return s; }
+
+  // REBALANCE — the prescribed pass, with an honesty law: when the skew is ROUTING BIAS
+  // (a shared corpus direction dragging every memory toward one axis), set the center and
+  // re-route by difference. When centering would NOT materially help (the content genuinely
+  // clusters), the pass REFUSES — a cosmetic shuffle is not a rebalance. The improvement
+  // bar is 15%: after.cv must be ≤ 0.85 × before.cv, or the shape is the truth.
+  rebalance() {
+    const all = this.chambers.flat();
+    if (all.length < 24) return { ok: false, why: 'too few memories to judge balance — two per chamber before any surgery' };
+    const before = this.balance();
+    if (before.balanced) return { ok: false, why: 'balance already holds (cv ' + before.cv.toFixed(3) + ') — there is nothing to fix, and healthy tissue is not surgery material' };
+    const dim = all[0].vector.length;
+    const mean = new Array(dim).fill(0);
+    for (const r of all) for (let i = 0; i < dim; i++) mean[i] += r.vector[i];
+    for (let i = 0; i < dim; i++) mean[i] /= all.length;
+    if (Math.sqrt(mean.reduce((a, x) => a + x * x, 0)) < 1e-9) {
+      return { ok: false, why: 'the corpus has no shared direction — there is nothing to center away' };
+    }
+    const trial = new Array(12).fill(0);
+    for (const r of all) {
+      const c = r.vector.map((x, i) => x - mean[i]);
+      const n = Math.sqrt(c.reduce((a, x) => a + x * x, 0));
+      trial[n < 1e-9 ? chamber(r.vector) : chamber(c.map((x) => x / n))]++;
+    }
+    const afterCv = cv(trial);
+    if (!(afterCv <= before.cv * 0.85)) {
+      return { ok: false, why: 'centering does not materially improve balance (cv ' + before.cv.toFixed(3) + ' → ' + afterCv.toFixed(3) + ') — the corpus genuinely clusters where it clusters; a cosmetic shuffle is refused' };
+    }
+    this.center = mean;
+    const chambers = Array.from({ length: 12 }, () => []);
+    let moved = 0;
+    for (const r of all) {
+      const c = this._route(r.vector);
+      if (c !== r.chamber) moved++;
+      chambers[c].push({ ...r, chamber: c });
+    }
+    this.chambers = chambers;
+    const after = this.balance();
+    return { ok: true, before: { distribution: before.distribution, cv: before.cv }, after: { distribution: after.distribution, cv: after.cv }, moved };
+  }
+
+  toJSON() { return { v: 1, size: this.size, chambers: this.chambers, center: this.center }; }    // single-file persistence
+  static fromJSON(o) { const s = new FallRemember(); if (o && Array.isArray(o.chambers)) { s.chambers = o.chambers; s.size = o.size ?? o.chambers.flat().length; s.center = Array.isArray(o.center) ? o.center : null; } return s; }
 }
 
 export default FallRemember;
