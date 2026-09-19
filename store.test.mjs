@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sealEnvelope, openEnvelope, parseSnapshotFile, KIND, VERSION } from './store.mjs';
+import { sealEnvelope, openEnvelope, parseSnapshotFile, receiptHashOf, KIND, VERSION } from './store.mjs';
 import { address } from './fall-remember.mjs';
 
 const REAL_JSON = JSON.stringify({ v: 1, size: 2, chambers: Array.from({ length: 12 }, () => []), center: null });
@@ -10,6 +10,14 @@ function realSeal(json = REAL_JSON, n = 0) {
   const r = sealEnvelope({ json, compressedB64: 'ZmFrZS1jb21wcmVzc2VkLWJ5dGVz', createdAt: '2026-09-19T00:00:0' + n + 'Z' });
   assert.equal(r.ok, true, 'test fixture must itself be a genuinely valid seal: ' + JSON.stringify(r));
   return r.envelope;
+}
+
+// simulates a SOPHISTICATED tamperer who edits a field AND recomputes the receipt hash to match —
+// isolates whichever DEEPER check (addr/shield/rawBytes) a test is actually targeting, rather than
+// always just re-proving the outer receipt-hash layer catches everything (real, but a weaker test).
+function reReceipt(env) {
+  const { receiptHash, ...body } = env;
+  return { ...body, receiptHash: receiptHashOf(body) };
 }
 
 // ---- sealEnvelope ----
@@ -55,34 +63,43 @@ test('openEnvelope: refuses when the decompressed bytes do not match what was se
   assert.equal(r.valid, false);
 });
 
-test('openEnvelope: catches a directly-tampered addr field (payload untouched, only the claim changed)', () => {
+test('openEnvelope: the receipt hash alone catches an unsophisticated tamper to ANY field — even one addr/shield/rawBytes never separately check (createdAt, compressedBytes)', () => {
   const env = realSeal(REAL_JSON);
-  const tampered = { ...env, addr: address(OTHER_JSON) }; // a real address, just the WRONG one for this payload
+  for (const patch of [{ addr: address(OTHER_JSON) }, { createdAt: 'a different time' }, { compressedBytes: env.compressedBytes + 1 }]) {
+    const r = openEnvelope({ ...env, ...patch }, REAL_JSON);
+    assert.equal(r.valid, false, JSON.stringify(patch));
+    assert.match(r.why, /receipt hash does not match/);
+  }
+});
+
+test('openEnvelope: catches a directly-tampered addr field even from a sophisticated tamperer who fixed the receipt hash too', () => {
+  const env = realSeal(REAL_JSON);
+  const tampered = reReceipt({ ...env, addr: address(OTHER_JSON) }); // a real address, just the WRONG one for this payload
   const r = openEnvelope(tampered, REAL_JSON); // the real decompressed bytes are still the honest original
   assert.equal(r.valid, false);
   assert.match(r.why, /do not match the envelope's address/);
 });
 
-test('openEnvelope: catches a shield that is internally VALID but simply wrong for this payload (a swapped-in shield, not a corrupted number)', () => {
+test('openEnvelope: catches a shield that is internally VALID but simply wrong for this payload (a swapped-in shield, receipt hash also fixed)', () => {
   const envA = realSeal(REAL_JSON);
   const envB = realSeal(OTHER_JSON, 1);
-  const tampered = { ...envA, shield: envB.shield }; // a genuinely well-formed shield — for the WRONG payload
+  const tampered = reReceipt({ ...envA, shield: envB.shield }); // a genuinely well-formed shield — for the WRONG payload
   const r = openEnvelope(tampered, REAL_JSON);
   assert.equal(r.valid, false);
   assert.match(r.why, /shield does not match/);
 });
 
-test('openEnvelope: refuses a malformed shield object before running the full check', () => {
+test('openEnvelope: refuses a malformed shield object before running the full check, even receipt-hash-consistent', () => {
   const env = realSeal(REAL_JSON);
-  const tampered = { ...env, shield: { n: 'not-a-number' } };
+  const tampered = reReceipt({ ...env, shield: { n: 'not-a-number' } });
   const r = openEnvelope(tampered, REAL_JSON);
   assert.equal(r.valid, false);
   assert.match(r.why, /shield itself is malformed/);
 });
 
-test('openEnvelope: refuses a length mismatch even if the address happened to still match (extreme edge, defence in depth)', () => {
+test('openEnvelope: refuses a length mismatch even if the address happened to still match (extreme edge, defence in depth, receipt-hash-consistent)', () => {
   const env = realSeal(REAL_JSON);
-  const tampered = { ...env, rawBytes: env.rawBytes + 1 };
+  const tampered = reReceipt({ ...env, rawBytes: env.rawBytes + 1 });
   const r = openEnvelope(tampered, REAL_JSON);
   assert.equal(r.valid, false);
 });
@@ -98,6 +115,11 @@ test('openEnvelope: rawBytes must be a non-negative integer — boundary + guard
   assert.match(openEnvelope({ ...realSeal(REAL_JSON), rawBytes: -1 }, REAL_JSON).why, /carries no rawBytes count/);
   // clause 1 alone fails: non-negative, but not an integer
   assert.match(openEnvelope({ ...realSeal(REAL_JSON), rawBytes: 5.5 }, REAL_JSON).why, /carries no rawBytes count/);
+});
+
+test('openEnvelope: compressedBytes and receiptHash must be present and string/int-typed', () => {
+  assert.match(openEnvelope({ ...realSeal(REAL_JSON), compressedBytes: 'not-a-number' }, REAL_JSON).why, /carries no compressedBytes count/);
+  assert.match(openEnvelope({ ...realSeal(REAL_JSON), receiptHash: 42 }, REAL_JSON).why, /carries no receipt hash/);
 });
 
 test('openEnvelope: refuses malformed/hostile envelope shapes without throwing', () => {

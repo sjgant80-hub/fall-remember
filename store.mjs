@@ -23,6 +23,17 @@
 //
 // Pure and total: garbage in -> { ok:false, why }, never a throw. No I/O, no clock (createdAt is
 // passed in by the caller, same discipline as every receipt-sealing function in this estate).
+//
+// AUDIT-SHAPED, not just durable: the envelope IS a receipt in the same {...,receiptHash} shape
+// every other receipt in this estate uses — sealed once, self-verified on the way back in, so a
+// restored memory is VERIFIABLE, not merely present. Honest about the primitive underneath it,
+// stated plainly rather than oversold: address() is a non-cryptographic 128-bit hash ("no crypto
+// needed" by its own comment) — real, deterministic, and reliable against corruption, truncation,
+// and hand-editing (everything this store's own threat model cares about: a bad disk write, a
+// stray edit, a half-copied file), but not a cryptographic signature against a determined forger
+// the way this estate's Ed25519-signed receipts are elsewhere. If that stronger guarantee is ever
+// needed for this file, sign the receiptHash with the estate's wallet pattern — a real, separate,
+// additive step, not pretended here.
 
 import { address } from './fall-remember.mjs';
 import { shielded, verifyShield } from './fold.mjs';
@@ -33,6 +44,16 @@ const isInt = (v) => Number.isInteger(v) && v >= 0;
 
 export const KIND = 'fall-remember-snapshot';
 export const VERSION = 1;
+
+// The envelope is a RECEIPT, same shape as every other receipt in this estate: seal computes a
+// hash over every OTHER field, verify recomputes it and refuses on any disagreement — so a tamper
+// to createdAt or compressedBytes (fields addr/shield alone never touch) is caught too, not just a
+// tamper to the payload itself. address() again — this repo's own hash, not a new one.
+// Exported deliberately: a caller re-checking a hand-modified envelope in a test, or verifying an
+// envelope's OWN self-consistency without decompressing anything, needs to recompute this too.
+export function receiptHashOf(e) {
+  return address([e.v, e.kind, e.createdAt, e.addr, e.shield.n, e.shield.chk, e.rawBytes, e.compressedBytes, e.compressed].join('|'));
+}
 
 function shieldOf(addr) {
   // shield() takes an integer; derive one from the first 32 bits of the 128-bit address hex —
@@ -55,19 +76,17 @@ export function sealEnvelope(input) {
   if (!isStr(createdAt)) return { ok: false, why: 'the envelope needs a createdAt timestamp' };
   const addr = address(json);
   const shield = shieldOf(addr);
-  return {
-    ok: true,
-    envelope: {
-      v: VERSION,
-      kind: KIND,
-      createdAt,
-      addr,
-      shield,
-      rawBytes: json.length,
-      compressedBytes: compressedB64.length,
-      compressed: compressedB64,
-    },
+  const body = {
+    v: VERSION,
+    kind: KIND,
+    createdAt,
+    addr,
+    shield,
+    rawBytes: json.length,
+    compressedBytes: compressedB64.length,
+    compressed: compressedB64,
   };
+  return { ok: true, envelope: { ...body, receiptHash: receiptHashOf(body) } };
 }
 
 /**
@@ -84,7 +103,14 @@ export function openEnvelope(envelope, decompressedJson) {
   if (!isStr(e.addr)) return { ok: false, why: 'the envelope carries no address' };
   if (!isObj(e.shield)) return { ok: false, why: 'the envelope carries no shield' };
   if (!isInt(e.rawBytes)) return { ok: false, why: 'the envelope carries no rawBytes count' };
+  if (!isInt(e.compressedBytes)) return { ok: false, why: 'the envelope carries no compressedBytes count' };
+  if (!isStr(e.receiptHash)) return { ok: false, why: 'the envelope carries no receipt hash' };
   if (!isStr(decompressedJson)) return { ok: false, why: 'nothing was decompressed to check against the envelope' };
+
+  // the RECEIPT check — every field the envelope claims about itself, not just the payload. Catches
+  // a tamper to createdAt/compressedBytes/rawBytes that a payload-only check would never see.
+  const { receiptHash, ...body } = e;
+  if (receiptHashOf(body) !== receiptHash) return { ok: true, valid: false, why: 'the envelope\'s own receipt hash does not match its fields — the envelope itself was edited after it was sealed' };
 
   const realAddr = address(decompressedJson);
   if (!verifyShield(e.shield)) return { ok: true, valid: false, why: 'the shield itself is malformed — refused before the full check even runs' };
