@@ -19,3 +19,11 @@ jobs:
         run: |
           node /tmp/witness/witness.mjs mutate senses.mjs             --timeout 60000 --cap 400 --baseline senses.baseline.json             --test node --test senses.test.mjs | tee senses-verdict.txt
           grep -q '"clean": true' senses-verdict.txt || { echo "::error::mutants survived in the senses — the gate is not clean"; exit 1; }
+      # store.mjs is the durable "own your memory file" envelope law (self-verifying receipt over a
+      # compressed snapshot). disk.mjs is the UNGATED I/O wire (gzip via CompressionStream + File
+      # System Access + download fallback) — its browser-only branches can't be mutation-tested in
+      # node, so it is covered by the `node --test` step above + the live save→wipe→restore walk, not witness.
+      - name: witness — the durable store (own-your-memory envelope) re-proves itself too
+        run: |
+          node /tmp/witness/witness.mjs mutate store.mjs             --timeout 60000 --cap 500             --test node --test store.test.mjs | tee store-verdict.txt
+          grep -q '"clean": true' store-verdict.txt || { echo "::error::mutants survived in the store — the gate is not clean"; exit 1; }
