@@ -57,4 +57,75 @@
   <h1 style="font:400 34px Georgia,serif;color:#a78bfa;margin:8px 0">fall-remember</h1>
   <p>A sovereign, fold-native memory organ — a 12-chamber dodecahedral store with content-addressed fold-signatures, cube retrieval, and a kappa-gate.</p>
   <p style="color:#8b93a7">Deterministic · zero-dependency · konomified. <a style="color:#4ade80" href="https://github.com/sjgant80-hub/fall-remember">source</a></p>
+
+  <h2 style="font:400 20px Georgia,serif;color:#a78bfa;margin-top:36px">Own your memory file</h2>
+  <p style="color:#8b93a7">Until this, the dodeca above was <b>pure in-memory</b> — gone on any reload, not even IndexedDB. This is the durable store underneath it: compress the whole memory, write it to a file <i>you</i> own, restore it later — even after everything in the browser was wiped. No pricing anywhere on this page.</p>
+  <textarea id="memText" placeholder="Type a memory and press Store…" style="width:100%;min-height:60px;background:#12151c;border:1px solid #2a2f3a;border-radius:8px;color:inherit;padding:10px;font:14px/1.5 ui-monospace,monospace"></textarea>
+  <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+    <button id="btnStore" style="background:#a78bfa;color:#0b0d12;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:600">Store</button>
+    <button id="btnSave" style="background:#12151c;color:#e8eaf0;border:1px solid #2a2f3a;border-radius:6px;padding:8px 14px;cursor:pointer">⤓ Save memory to disk</button>
+    <button id="btnClear" style="background:#12151c;color:#e8eaf0;border:1px solid #2a2f3a;border-radius:6px;padding:8px 14px;cursor:pointer">Simulate a wipe (clear in-memory)</button>
+    <label style="background:#12151c;color:#e8eaf0;border:1px solid #2a2f3a;border-radius:6px;padding:8px 14px;cursor:pointer">⤒ Restore from disk<input id="fileRestore" type="file" accept="application/json" style="display:none"></label>
+  </div>
+  <div id="memList" style="margin-top:14px;font-size:.85rem;color:#c7cbd6"></div>
+  <div id="memStatus" style="margin-top:10px;font-size:.85rem"></div>
+
+  <script type="module">
+    import { FallRemember } from './fall-remember.mjs';
+    import { makeSnapshot, restoreSnapshot, hasFileSystemAccess, pickSaveHandle, saveToHandle, downloadEnvelope, readUploadedFile } from './disk.mjs';
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    let fr = new FallRemember();
+    let savedHandle = null; // set once File System Access grants one, for seamless re-save
+    function renderList() {
+      const all = fr.chambers.flat();
+      $('memList').innerHTML = all.length
+        ? `<b>${all.length}</b> memory(ies) in-browser right now:<br>` + all.map((r) => '· ' + esc(r.text) + ' <span style="color:#5c6270">(chamber ' + r.chamber + ')</span>').join('<br>')
+        : '<span style="color:#5c6270">nothing in memory right now</span>';
+    }
+    $('btnStore').onclick = () => {
+      const text = $('memText').value.trim();
+      if (!text) return;
+      fr.store({ text });
+      $('memText').value = '';
+      renderList();
+      $('memStatus').textContent = '';
+    };
+    $('btnClear').onclick = () => {
+      fr = new FallRemember(); // the only "storage" this ever had — reassigning IS the wipe
+      renderList();
+      $('memStatus').innerHTML = '<span style="color:#f5c542">✂ wiped — exactly what a browser data-clear (or a plain reload, since this was never even in IndexedDB) already did to this organ before today.</span>';
+    };
+    $('btnSave').onclick = async () => {
+      $('memStatus').textContent = 'compressing…';
+      const made = await makeSnapshot(fr.toJSON());
+      if (!made.ok) { $('memStatus').innerHTML = '<span style="color:#ff6b6b">✗ ' + esc(made.why) + '</span>'; return; }
+      if (hasFileSystemAccess()) {
+        if (!savedHandle) { const picked = await pickSaveHandle('fall-remember-memory.json'); if (!picked.ok) { $('memStatus').innerHTML = '<span style="color:#ff6b6b">✗ ' + esc(picked.why) + '</span>'; return; } savedHandle = picked.handle; }
+        const w = await saveToHandle(savedHandle, made.envelope);
+        $('memStatus').innerHTML = w.ok
+          ? '<span style="color:#4ade80">✓ saved to your granted file (' + made.envelope.compressedBytes + ' bytes compressed from ' + made.envelope.rawBytes + ') — File System Access, re-saves silently from here.</span>'
+          : '<span style="color:#ff6b6b">✗ ' + esc(w.why) + '</span>';
+      } else {
+        downloadEnvelope(made.envelope);
+        $('memStatus').innerHTML = '<span style="color:#4ade80">✓ downloaded (' + made.envelope.compressedBytes + ' bytes compressed from ' + made.envelope.rawBytes + ') — this browser does not offer File System Access, so this is the universal fallback: the same file you\'d re-upload with Restore.</span>';
+      }
+    };
+    $('fileRestore').onchange = async (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      $('memStatus').textContent = 'restoring…';
+      const read = await readUploadedFile(file);
+      if (!read.ok) { $('memStatus').innerHTML = '<span style="color:#ff6b6b">✗ ' + esc(read.why) + '</span>'; return; }
+      const restored = await restoreSnapshot(read.parsed);
+      if (!restored.ok) { $('memStatus').innerHTML = '<span style="color:#ff6b6b">✗ ' + esc(restored.why) + '</span>'; return; }
+      if (!restored.valid) { $('memStatus').innerHTML = '<span style="color:#ff6b6b">✗ refused: ' + esc(restored.why) + '</span>'; return; }
+      fr = FallRemember.fromJSON(restored.state);
+      renderList();
+      $('memStatus').innerHTML = '<span style="color:#4ade80">✓ restored and VERIFIED intact (' + fr.size + ' memories) — the address hash and the shield both re-checked against the decompressed bytes.</span>';
+    };
+    $('memStatus').innerHTML = hasFileSystemAccess()
+      ? '<span style="color:#5c6270">File System Access available in this browser — Save will ask once, then re-save silently.</span>'
+      : '<span style="color:#5c6270">File System Access is not available in this browser (Chromium-family only) — Save downloads a file instead; Restore uploads it back. Said here plainly, not implied universal.</span>';
+    renderList();
+  </script>
 </div>
