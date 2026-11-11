@@ -23,8 +23,8 @@ produces the same result on every machine.
 npm test
 ```
 
-Every source line is guarded by a test (mutation-checked with witness). Structure and behaviour are gated by
-konomify before this build joins the mesh.
+Every source line is guarded by a test (mutation-checked with witness). Structure and behaviour are gated
+before this build joins the mesh.
 
 ## License
 
